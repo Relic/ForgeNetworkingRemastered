@@ -243,6 +243,7 @@ namespace BeardedManStudios.Forge.Networking
 		{
 			public BMSByte data;
 			public Receivers receivers;
+			public bool reliable;
 			public byte methodId;
 			public ulong timestep;
 		}
@@ -298,6 +299,7 @@ namespace BeardedManStudios.Forge.Networking
 			public NetworkingPlayer TargetPlayer;
 			public byte MethodId;
 			public Receivers Receivers;
+			public bool Reliable;
 			public object[] Args;
 
 			public override string ToString()
@@ -540,7 +542,7 @@ namespace BeardedManStudios.Forge.Networking
 				OwnershipChanged();
 			
 			IsOwner = args.GetNext<bool>();
-          		 //call ownership event on new owner
+				 //call ownership event on new owner
 			if (!IsOwner)
 				OwnershipChanged();
 		}
@@ -865,7 +867,12 @@ namespace BeardedManStudios.Forge.Networking
 				InvokeRpc(rpc.sender, rpc.timestep, rpc.data, rpc.receivers);
 
 			foreach (PendingLocalRPC rpc in pendingLocalRpcs)
-				SendRpc(rpc.TargetPlayer, rpc.MethodId, rpc.Args);
+			{
+				if (rpc.Reliable)
+					SendRpc(rpc.TargetPlayer, rpc.MethodId, rpc.Args);
+				else
+					SendRpcUnreliable(rpc.TargetPlayer, rpc.MethodId, rpc.Args);
+			}
 
 			pendingClientRegisterRpc.Clear();
 			pendingLocalRpcs.Clear();
@@ -916,7 +923,7 @@ namespace BeardedManStudios.Forge.Networking
 				// then replicate to the correct receivers
 				// Do not read or replicate if the server denies replication
 				if (ServerAllowRpc(methodId, receivers, rpcArgs))
-					SendRpc(null, methodId, overwriteExisting, receivers, sender, args);
+					SendRpc(null, methodId, overwriteExisting, receivers, true, sender, args);
 
 				return;
 			}
@@ -974,7 +981,7 @@ namespace BeardedManStudios.Forge.Networking
 			lock (rpcBuffer)
 			{
 				for (int i = 0; i < count; i++)
-					FinalizeSendRpc(rpcBuffer[i].data, rpcBuffer[i].receivers, rpcBuffer[i].methodId, rpcBuffer[i].timestep, player);
+					FinalizeSendRpc(rpcBuffer[i].data, rpcBuffer[i].receivers, rpcBuffer[i].reliable, rpcBuffer[i].methodId, rpcBuffer[i].timestep, player);
 			}
 		}
 
@@ -993,7 +1000,7 @@ namespace BeardedManStudios.Forge.Networking
 			if (!rpcLookup.TryGetValue(methodName, out methodId))
 				throw new Exception("Invalid method name supplied, this method is also obsolete so maybe this is a good time to update to the new non-string based methods");
 
-			SendRpc(null, methodId, false, receivers, Networker.Me, args);
+			SendRpc(null, methodId, false, true, receivers, Networker.Me, args);
 		}
 
 		/// <summary>
@@ -1005,7 +1012,7 @@ namespace BeardedManStudios.Forge.Networking
 		/// <param name="args">The input arguments for the method call</param>
 		public void SendRpc(byte methodId, Receivers receivers, params object[] args)
 		{
-			SendRpc(null, methodId, false, receivers, Networker.Me, args);
+			SendRpc(null, methodId, false, true, receivers, Networker.Me, args);
 		}
 
 		/// <summary>
@@ -1013,8 +1020,8 @@ namespace BeardedManStudios.Forge.Networking
 		/// delegated on the network
 		/// </summary>
 		/// <param name="methodName">The name of the RPC to be called</param>
-		/// <param name="receivers">The clients / server to receive the message</param>
 		/// <param name="replacePrevious">If <c>True</c> then the previous call to this method will be replaced with this one</param>
+		/// <param name="receivers">The clients / server to receive the message</param>
 		/// <param name="args">The input arguments for the method call</param>
 		[Obsolete("Please use the SendRpc that takes the byte id argument instead for better performance")]
 		public void SendRpc(string methodName, bool replacePrevious, Receivers receivers, params object[] args)
@@ -1024,7 +1031,7 @@ namespace BeardedManStudios.Forge.Networking
 			if (!rpcLookup.TryGetValue(methodName, out methodId))
 				throw new Exception("Invalid method name supplied, this method is also obsolete so maybe this is a good time to update to the new non-string based methods");
 
-			SendRpc(null, methodId, replacePrevious, receivers, Networker.Me, args);
+			SendRpc(null, methodId, replacePrevious, true, receivers, Networker.Me, args);
 		}
 
 		/// <summary>
@@ -1032,12 +1039,24 @@ namespace BeardedManStudios.Forge.Networking
 		/// delegated on the network
 		/// </summary>
 		/// <param name="methodId">The id of the RPC to be called</param>
-		/// <param name="receivers">The clients / server to receive the message</param>
 		/// <param name="replacePrevious">If <c>True</c> then the previous call to this method will be replaced with this one</param>
+		/// <param name="receivers">The clients / server to receive the message</param>
 		/// <param name="args">The input arguments for the method call</param>
 		public void SendRpc(byte methodId, bool replacePrevious, Receivers receivers, params object[] args)
 		{
-			SendRpc(null, methodId, replacePrevious, receivers, Networker.Me, args);
+			SendRpc(null, methodId, replacePrevious, true, receivers, Networker.Me, args);
+		}
+
+		/// <summary>
+		/// Build the network frame (message) data for this RPC call so that it is properly
+		/// delegated on the network - this RPC will be unreliable
+		/// </summary>
+		/// <param name="methodId">The id of the RPC to be called</param>
+		/// <param name="receivers">The clients / server to receive the message</param>
+		/// <param name="args">The input arguments for the method call</param>
+		public void SendRpcUnreliable(byte methodId, Receivers receivers, params object[] args)
+		{
+			SendRpc(null, methodId, false, false, receivers, Networker.Me, args);
 		}
 
 		/// <summary>
@@ -1056,7 +1075,7 @@ namespace BeardedManStudios.Forge.Networking
 			if (!rpcLookup.TryGetValue(methodName, out methodId))
 				throw new Exception("Invalid method name supplied, this method is also obsolete so maybe this is a good time to update to the new non-string based methods");
 
-			SendRpc(targetPlayer, methodId, false, receivers, Networker.Me, args);
+			SendRpc(targetPlayer, methodId, false, true, receivers, Networker.Me, args);
 		}
 
 		/// <summary>
@@ -1074,7 +1093,7 @@ namespace BeardedManStudios.Forge.Networking
 			if (!rpcLookup.TryGetValue(methodName, out methodId))
 				throw new Exception("Invalid method name supplied, this method is also obsolete so maybe this is a good time to update to the new non-string based methods");
 
-			SendRpc(targetPlayer, methodId, false, Receivers.Target, Networker.Me, args);
+			SendRpc(targetPlayer, methodId, false, true, Receivers.Target, Networker.Me, args);
 		}
 
 		/// <summary>
@@ -1086,7 +1105,7 @@ namespace BeardedManStudios.Forge.Networking
 		/// <param name="args">The input arguments for the method call</param>
 		public void SendRpc(NetworkingPlayer targetPlayer, byte methodId, params object[] args)
 		{
-			SendRpc(targetPlayer, methodId, false, Receivers.Target, Networker.Me, args);
+			SendRpc(targetPlayer, methodId, false, true, Receivers.Target, Networker.Me, args);
 		}
 
 		/// <summary>
@@ -1095,8 +1114,8 @@ namespace BeardedManStudios.Forge.Networking
 		/// </summary>
 		/// <param name="targetPlayer">The player that is being sent this RPC from the server</param>
 		/// <param name="methodName">The name of the RPC to be called</param>
-		/// <param name="receivers">The clients / server to receive the message</param>
 		/// <param name="replacePrevious">If <c>True</c> then the previous call to this method will be replaced with this one</param>
+		/// <param name="receivers">The clients / server to receive the message</param>
 		/// <param name="args">The input arguments for the method call</param>
 		[Obsolete("Please use the SendRpc that takes the byte id argument instead for better performance")]
 		public void SendRpc(NetworkingPlayer targetPlayer, string methodName, bool replacePrevious, Receivers receivers, params object[] args)
@@ -1106,7 +1125,7 @@ namespace BeardedManStudios.Forge.Networking
 			if (!rpcLookup.TryGetValue(methodName, out methodId))
 				throw new Exception("Invalid method name supplied, this method is also obsolete so maybe this is a good time to update to the new non-string based methods");
 
-			SendRpc(targetPlayer, methodId, replacePrevious, receivers, Networker.Me, args);
+			SendRpc(targetPlayer, methodId, replacePrevious, true, receivers, Networker.Me, args);
 		}
 
 		/// <summary>
@@ -1114,13 +1133,24 @@ namespace BeardedManStudios.Forge.Networking
 		/// delegated on the network
 		/// </summary>
 		/// <param name="targetPlayer">The player that is being sent this RPC from the server</param>
-		/// <param name="methodId">The id of the RPC to be called</param>
-		/// <param name="receivers">The clients / server to receive the message</param>
 		/// <param name="replacePrevious">If <c>True</c> then the previous call to this method will be replaced with this one</param>
+		/// <param name="methodId">The id of the RPC to be called</param>
 		/// <param name="args">The input arguments for the method call</param>
 		public void SendRpc(NetworkingPlayer targetPlayer, bool replacePrevious, byte methodId, params object[] args)
 		{
-			SendRpc(targetPlayer, methodId, replacePrevious, Receivers.Target, Networker.Me, args);
+			SendRpc(targetPlayer, methodId, replacePrevious, true, Receivers.Target, Networker.Me, args);
+		}
+
+		/// <summary>
+		/// Build the network frame (message) data for this RPC call so that it is properly
+		/// delegated on the network - this RPC will be unreliable
+		/// </summary>
+		/// <param name="targetPlayer">The player that is being sent this RPC from the server</param>
+		/// <param name="methodId">The id of the RPC to be called</param>
+		/// <param name="args">The input arguments for the method call</param>
+		public void SendRpcUnreliable(NetworkingPlayer targetPlayer, byte methodId, params object[] args)
+		{
+			SendRpc(targetPlayer, methodId, false, false, Receivers.Target, Networker.Me, args);
 		}
 
 		/// <summary>
@@ -1129,10 +1159,13 @@ namespace BeardedManStudios.Forge.Networking
 		/// </summary>
 		/// <param name="targetPlayer">The target player that should receive the RPC</param>
 		/// <param name="methodId">The id of the RPC that is to be called</param>
+		/// <param name="replacePrevious">If <c>True</c> then the previous call to this method will be replaced with this one</param>
+		/// <param name="reliable">If <c>True</c> then this RPC call will be reliable</param>
 		/// <param name="receivers">The clients / server to receive the message</param>
+		/// <param name="sender">The client / server which is sending the RPC</param>
 		/// <param name="args">The input arguments for the method call</param>
 		/// <returns></returns>
-		public void SendRpc(NetworkingPlayer targetPlayer, byte methodId, bool replacePrevious, Receivers receivers, NetworkingPlayer sender, object[] args)
+		public void SendRpc(NetworkingPlayer targetPlayer, byte methodId, bool replacePrevious, bool reliable, Receivers receivers, NetworkingPlayer sender, object[] args)
 		{
 			if (receivers == Receivers.Target && !(Networker is IServer))
 				receivers = Receivers.Server;
@@ -1144,6 +1177,7 @@ namespace BeardedManStudios.Forge.Networking
 					TargetPlayer = targetPlayer,
 					MethodId = methodId,
 					Receivers = receivers,
+					Reliable = reliable,
 					Args = args
 				});
 
@@ -1197,6 +1231,7 @@ namespace BeardedManStudios.Forge.Networking
 						{
 							data = new BMSByte().Clone(data),
 							receivers = receivers,
+							reliable = reliable,
 							methodId = methodId,
 							timestep = timestep
 						};
@@ -1225,7 +1260,7 @@ namespace BeardedManStudios.Forge.Networking
 			}
 
 			if (!Networker.IsServer || receivers != Receivers.Server)
-				FinalizeSendRpc(data, receivers, methodId, timestep, targetPlayer, sender);
+				FinalizeSendRpc(data, receivers, reliable, methodId, timestep, targetPlayer, sender);
 
 			if (Networker is IServer)
 			{
@@ -1248,7 +1283,7 @@ namespace BeardedManStudios.Forge.Networking
 			Rpcs[methodId].Invoke(new RpcArgs(args, new RPCInfo { SendingPlayer = sender, TimeStep = timestep }), sender == Networker.Me);
 		}
 
-		private void FinalizeSendRpc(BMSByte data, Receivers receivers, byte methodId, ulong timestep, NetworkingPlayer targetPlayer = null, NetworkingPlayer sender = null)
+		private void FinalizeSendRpc(BMSByte data, Receivers receivers, bool reliable, byte methodId, ulong timestep, NetworkingPlayer targetPlayer = null, NetworkingPlayer sender = null)
 		{
 			// Generate a binary frame with a router
 			Binary rpcFrame = new Binary(timestep, Networker is TCPClient, data, receivers, MessageGroupIds.GetId("NO_RPC_" + NetworkId + "_" + methodId), Networker is BaseTCP, RouterIds.RPC_ROUTER_ID);
@@ -1259,7 +1294,7 @@ namespace BeardedManStudios.Forge.Networking
 				if (Networker is TCPServer)
 					((TCPServer)Networker).Send(targetPlayer.TcpClientHandle, rpcFrame);
 				else
-					((UDPServer)Networker).Send(targetPlayer, rpcFrame, true);
+					((UDPServer)Networker).Send(targetPlayer, rpcFrame, reliable);
 			}
 			else
 			{
@@ -1268,7 +1303,7 @@ namespace BeardedManStudios.Forge.Networking
 				else if (Networker is TCPClient)
 					((TCPClient)Networker).Send(rpcFrame);
 				else if (Networker is BaseUDP)
-					((BaseUDP)Networker).Send(rpcFrame, true);
+					((BaseUDP)Networker).Send(rpcFrame, reliable);
 			}
 		}
 

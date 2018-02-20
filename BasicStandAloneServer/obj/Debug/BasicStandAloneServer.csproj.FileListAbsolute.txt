@@ -7,3 +7,11 @@ C:\git\ForgeNetworkingRemastered\BasicStandAloneServer\obj\Debug\BasicStandAlone
 C:\git\ForgeNetworkingRemastered\BasicStandAloneServer\obj\Debug\BasicStandAloneServer.exe
 C:\git\ForgeNetworkingRemastered\BasicStandAloneServer\obj\Debug\BasicStandAloneServer.pdb
 C:\git\ForgeNetworkingRemastered\BasicStandAloneServer\obj\Debug\BasicStandAloneServer.csproj.CoreCompileInputs.cache
+D:\dev\ForgeNetworkingRemastered\BasicStandAloneServer\bin\Debug\BasicStandAloneServer.exe.config
+D:\dev\ForgeNetworkingRemastered\BasicStandAloneServer\bin\Debug\BasicStandAloneServer.exe
+D:\dev\ForgeNetworkingRemastered\BasicStandAloneServer\bin\Debug\BasicStandAloneServer.pdb
+D:\dev\ForgeNetworkingRemastered\BasicStandAloneServer\bin\Debug\BeardedManStudios.dll
+D:\dev\ForgeNetworkingRemastered\BasicStandAloneServer\bin\Debug\BeardedManStudios.pdb
+D:\dev\ForgeNetworkingRemastered\BasicStandAloneServer\obj\Debug\BasicStandAloneServer.csprojResolveAssemblyReference.cache
+D:\dev\ForgeNetworkingRemastered\BasicStandAloneServer\obj\Debug\BasicStandAloneServer.exe
+D:\dev\ForgeNetworkingRemastered\BasicStandAloneServer\obj\Debug\BasicStandAloneServer.pdb

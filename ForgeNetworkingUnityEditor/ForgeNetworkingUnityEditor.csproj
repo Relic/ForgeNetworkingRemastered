@@ -38,6 +38,9 @@
     <Reference Include="UnityEngine">
       <HintPath>C:\Program Files\Unity\Editor\Data\Managed\UnityEngine.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null" />
+    <Reference Include="UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null" />
+    <Reference Include="UnityEngine.TextRenderingModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="FNSerializeMemberAttribute.cs" />
@@ -62,6 +65,14 @@
     <Compile Include="SimpleJSONEditor.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\BeardedManStudios\BeardedManStudios.csproj">
+      <Project>{1dc34cdd-667a-40be-9447-45866bf4607d}</Project>
+      <Name>BeardedManStudios</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Forge Networking Remastered Unity\Forge Networking Remastered Unity.csproj">
+      <Project>{7101bf79-1cbc-b118-a920-3b09b7453f1d}</Project>
+      <Name>Forge Networking Remastered Unity</Name>
+    </ProjectReference>
     <ProjectReference Include="..\ForgeNetworkingCommon\ForgeNetworkingCommon.csproj">
       <Project>{9c3af9d0-b19f-44a6-9068-84b636892bde}</Project>
       <Name>ForgeNetworkingCommon</Name>
